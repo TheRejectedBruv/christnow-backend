@@ -1,4 +1,4 @@
-package com.christnow.devotionals;
+package com.christnow.devotionals.config;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -8,9 +8,14 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-            .allowedOrigins("https://christnow.co") // Use this, not allowedOrigins
-            .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+            .allowedOrigins(
+                "https://christnow.co",
+                "https://www.christnow.co"
+            )
+            .allowedMethods("GET","POST","PUT","DELETE","OPTIONS")
             .allowedHeaders("*")
-            .allowCredentials(true);
+            .allowCredentials(true)
+            .maxAge(3600);
     }
 }
+
