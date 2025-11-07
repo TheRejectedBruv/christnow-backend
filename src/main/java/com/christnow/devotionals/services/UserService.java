@@ -13,7 +13,7 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
     @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final PasswordEncoder passwordEncoder;
     @Autowired
     private CourseRepository courseRepository;
     
@@ -49,4 +49,8 @@ public class UserService {
         user.getFreeCourses().add(course);
         userRepository.save(user);
     }
+    public UserService(PasswordEncoder passwordEncoder /*, other deps */) {
+        this.passwordEncoder = passwordEncoder;
+    }
+
 }
