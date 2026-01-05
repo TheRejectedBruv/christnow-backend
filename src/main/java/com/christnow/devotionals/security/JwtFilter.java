@@ -1,91 +1,126 @@
-
 package com.christnow.devotionals.security;
+
+
+import java.io.IOException;
+
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+
+
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    @Autowired
-    private JwtUtil jwtUtil;
 
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+    private final JwtUtil jwtUtil;
+    private final UserDetailsService userDetailsService;
+
+
+    public JwtFilter(JwtUtil jwtUtil, UserDetailsService userDetailsService) {
+        this.jwtUtil = jwtUtil;
+        this.userDetailsService = userDetailsService;
+    }
+
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        String path = request.getServletPath();
-        String method = request.getMethod();
-        System.out.println("🔍 Incoming path: " + path + " method: " + method);
 
-        // 1) Always let CORS preflight through
-        if ("OPTIONS".equalsIgnoreCase(method)) {
+        final String path = request.getServletPath();
+
+
+        // Allow preflight requests
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 2) Public endpoints (no JWT needed)
-        if (
-            "/users/register".equals(path) ||
-            "/users/login".equals(path) ||
-            (path.startsWith("/courses") && "GET".equalsIgnoreCase(method)) ||
-            (path.startsWith("/lessons") && "GET".equalsIgnoreCase(method))
-        ) {
+
+        // Do not require JWT for login/register
+        if ("/users/login".equals(path) || "/users/register".equals(path)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        // 3) Extract and validate JWT if present
+
         final String authHeader = request.getHeader("Authorization");
-        String subject = null; // should be email now
-        String jwt = null;
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            jwt = authHeader.substring(7);
+
+        // If no token, just continue (Security will block later if endpoint needs auth)
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+
+        final String jwt = authHeader.substring(7).trim();
+
+
+        String subject;
+        try {
+            subject = jwtUtil.extractUsername(jwt); // subject = email in your setup
+        } catch (Exception e) {
+            response.setHeader("X-JWT-FAIL", "Token parse failed");
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+            return;
+        }
+
+
+        if (subject != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            UserDetails userDetails;
             try {
-                subject = jwtUtil.extractUsername(jwt); // now returns email if you fixed login()
+                userDetails = userDetailsService.loadUserByUsername(subject);
             } catch (Exception e) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.setContentType("application/json");
-                response.getWriter().write("{\"error\": \"Invalid JWT token.\"}");
+                response.setHeader("X-JWT-FAIL", "User not found for token subject");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token user");
                 return;
             }
-        }
 
-        // If we have a subject and no auth set yet, authenticate
-        if (subject != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(subject); // expects email
-            if (jwtUtil.validateToken(jwt, userDetails.getUsername())) {
+
+            boolean ok;
+            try {
+                ok = jwtUtil.validateToken(jwt, subject);
+            } catch (Exception e) {
+                response.setHeader("X-JWT-FAIL", "Token validate exception");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token validation");
+                return;
+            }
+
+
+            if (ok) {
                 UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities()
+                        );
+
+
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
             } else {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.setContentType("application/json");
-                response.getWriter().write("{\"error\":\"JWT invalid or expired\"}");
+                response.setHeader("X-JWT-FAIL", "validateToken returned false");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
                 return;
             }
         }
 
-        // 4) Proceed
+
         filterChain.doFilter(request, response);
     }
 }
