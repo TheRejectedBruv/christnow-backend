@@ -65,10 +65,12 @@ public class SecurityConfig {
 
 
         // Allow your live frontend domains
-        config.setAllowedOriginPatterns(List.of(
+       /* config.setAllowedOriginPatterns(List.of(
             "https://christnow.co",
             "https://www.christnow.co"
         ));
+ */
+        config.setAllowedOriginPatterns(List.of("*"));
 
 
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
