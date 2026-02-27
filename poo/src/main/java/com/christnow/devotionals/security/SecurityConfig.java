@@ -64,20 +64,10 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
 
-        // Allow your live frontend domains
-       /* config.setAllowedOriginPatterns(List.of(
-            "https://christnow.co",
-            "https://www.christnow.co"
-        ));
- */
         config.setAllowedOriginPatterns(List.of("*"));
-
-
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(false);
-        config.setMaxAge(3600L);
 
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -86,4 +76,5 @@ public class SecurityConfig {
 
         return source;
     }
+
 }
