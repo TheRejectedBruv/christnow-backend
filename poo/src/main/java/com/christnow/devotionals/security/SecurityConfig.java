@@ -46,7 +46,7 @@ public class SecurityConfig {
 
 
                 // login & register
-                .requestMatchers("/api/users/login", "/api/users/register").permitAll()
+                .requestMatchers("/api/users/login", "/api/users/register", "/users/login", "/users/register").permitAll()
 
 
                 // public content
