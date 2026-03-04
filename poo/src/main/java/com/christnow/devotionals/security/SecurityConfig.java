@@ -42,7 +42,7 @@ public class SecurityConfig {
                 		"/api/users/login").permitAll()
                 .requestMatchers("/courses/**").permitAll()
                 .requestMatchers("/devotionals/**").permitAll()
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             );
 
 
