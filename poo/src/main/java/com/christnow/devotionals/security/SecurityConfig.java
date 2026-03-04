@@ -1,5 +1,6 @@
 package com.christnow.devotionals.security;
 
+
 import java.util.List;
 
 
@@ -31,17 +32,29 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+
         http
-            // EXPLICITLY bind our CORS configuration
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+
+
+                // allow preflight requests
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/health").permitAll()
-                .requestMatchers("/users/register", "/users/login", "/api/users/register",
-                		"/api/users/login").permitAll()
+
+
+                // login & register
+                .requestMatchers("/api/users/login", "/api/users/register").permitAll()
+
+
+                // public content
                 .requestMatchers("/courses/**").permitAll()
                 .requestMatchers("/devotionals/**").permitAll()
+
+
+                // everything else allowed for now
                 .anyRequest().permitAll()
             );
 
@@ -59,5 +72,39 @@ public class SecurityConfig {
     }
 
 
-   
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+
+        CorsConfiguration config = new CorsConfiguration();
+
+
+        config.setAllowedOrigins(List.of(
+                "https://christnow.co",
+                "https://www.christnow.co",
+                "http://localhost:5500",
+                "http://127.0.0.1:5500"
+        ));
+
+
+        config.setAllowedMethods(List.of(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS"
+        ));
+
+
+        config.setAllowedHeaders(List.of("*"));
+
+
+        config.setAllowCredentials(true);
+
+
+        UrlBasedCorsConfigurationSource source =
+                new UrlBasedCorsConfigurationSource();
+
+
+        source.registerCorsConfiguration("/**", config);
+
+
+        return source;
+    }
 }
