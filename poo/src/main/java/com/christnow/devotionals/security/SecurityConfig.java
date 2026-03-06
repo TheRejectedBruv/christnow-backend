@@ -79,10 +79,10 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
 
-        config.setAllowedOrigins(List.of(
+        config.setAllowedOriginPatterns(List.of(
                 "https://christnow.co",
-                "https://www.christnow.co",
-                "http://localhost:5500",
+                "https://www.christnow.co",       
+       "http://localhost:5500",
                 "http://127.0.0.1:5500"
         ));
 
@@ -93,8 +93,6 @@ public class SecurityConfig {
 
 
         config.setAllowedHeaders(List.of("*"));
-
-
         config.setAllowCredentials(true);
 
 
@@ -107,4 +105,5 @@ public class SecurityConfig {
 
         return source;
     }
+
 }
