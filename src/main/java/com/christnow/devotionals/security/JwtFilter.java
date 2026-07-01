@@ -57,7 +57,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
         // Do not require JWT for login/register
         if ("/users/login".equals(path) || "/users/register".equals(path)
-    || "/api/users/login".equals(path) || "api/users/register".equals(path)) {
+                || "/api/users/login".equals(path) || "/api/users/register".equals(path)) {
             filterChain.doFilter(request, response);
             return;
         }

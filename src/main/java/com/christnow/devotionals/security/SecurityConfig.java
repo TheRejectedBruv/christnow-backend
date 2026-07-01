@@ -44,7 +44,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/health").permitAll()
                 .requestMatchers("/users/register","/users/login","/api/users/register", "/api/users/login").permitAll()
-                .requestMatchers("/courses/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/courses").permitAll()
+                .requestMatchers(HttpMethod.GET, "/courses/{id}").permitAll()
+                .requestMatchers(HttpMethod.GET, "/courses/exists").permitAll()
+                .requestMatchers(HttpMethod.GET, "/lessons/by-course/**").permitAll()
+                .requestMatchers("/courses/**").authenticated()
                 .requestMatchers("/devotionals/**").permitAll()
                 .anyRequest().authenticated()
             );
@@ -69,7 +73,11 @@ public class SecurityConfig {
         // Use patterns so you don't get stuck on exact-match Origin issues
         config.setAllowedOriginPatterns(List.of(
             "https://christnow.co",
-            "https://www.christnow.co"
+            "https://www.christnow.co",
+            "https://*.netlify.app",
+            "https://*.netlify.com",
+            "http://localhost:*",
+            "http://127.0.0.1:*"
         ));
 
         config.setAllowedHeaders(List.of("*"));

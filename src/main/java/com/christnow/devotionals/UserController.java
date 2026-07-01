@@ -21,7 +21,9 @@ import org.springframework.web.bind.annotation.*;
 import com.christnow.devotionals.models.User;
 import com.christnow.devotionals.payload.LoginRequest;
 import com.christnow.devotionals.repositories.UserRepository;
+import com.christnow.devotionals.security.AuthUtils;
 import com.christnow.devotionals.security.JwtUtil;
+import com.christnow.devotionals.services.AdminService;
 import com.christnow.devotionals.services.UserService;
 
 
@@ -32,7 +34,7 @@ import com.christnow.devotionals.services.UserService;
         "https://www.christnow.co"
 })
 @RestController
-@RequestMapping("/users")
+@RequestMapping({"/users", "/api/users"})
 public class UserController {
 
 
@@ -46,6 +48,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private AdminService adminService;
 
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -61,6 +66,8 @@ public class UserController {
                 return ResponseEntity.badRequest().body("Username, email, and password cannot be null or empty");
             }
 
+            user.setUsername(user.getUsername().trim());
+            user.setEmail(user.getEmail().trim().toLowerCase());
 
             if (userRepository.findByUsername(user.getUsername()).isPresent()) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body("Username already taken");
@@ -74,10 +81,13 @@ public class UserController {
             User savedUser = userRepository.save(user);
 
 
+            String token = jwtUtil.generateToken(savedUser.getEmail());
+
             Map<String, Object> response = new HashMap<>();
             response.put("id", savedUser.getId());
             response.put("username", savedUser.getUsername());
             response.put("email", savedUser.getEmail());
+            response.put("token", token);
             response.put("message", "User registered successfully");
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
@@ -93,7 +103,8 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            Optional<User> optionalUser = userRepository.findByEmail(loginRequest.getEmail());
+            String email = loginRequest.getEmail() == null ? "" : loginRequest.getEmail().trim().toLowerCase();
+            Optional<User> optionalUser = userRepository.findByEmail(email);
             if (optionalUser.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password.");
             }
@@ -158,8 +169,10 @@ public class UserController {
         }
 
 
-        String email = authentication.getName(); // JWT subject in your setup
-
+        String email = AuthUtils.resolveEmail(authentication);
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Could not resolve signed-in email");
+        }
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -167,7 +180,7 @@ public class UserController {
 
         // IMPORTANT: never include password or UserDetails in the response
         Map<String, Object> out = new HashMap<>();
-        out.put("source", "UserController.getProfile_SAFE_v1"); // marker so we KNOW you hit this method
+        out.put("source", "UserController.getProfile_SAFE_v2");
         out.put("email", user.getEmail());
         out.put("username", user.getUsername());
         out.put("freeCourseIds", user.getFreeCourses() == null
@@ -176,6 +189,10 @@ public class UserController {
         out.put("ownedCourseIds", user.getOwnedCourses() == null
                 ? java.util.List.of()
                 : user.getOwnedCourses().stream().map(c -> c.getId()).toList());
+        out.put("admin", adminService.canManageCourses(user.getEmail()));
+        out.put("isConfiguredAdmin", adminService.isAdmin(user.getEmail()));
+        out.put("coursesEmpty", adminService.isCoursesEmpty());
+        out.put("adminConfigured", adminService.isAdminConfigured());
 
 
         return ResponseEntity.ok(out);
