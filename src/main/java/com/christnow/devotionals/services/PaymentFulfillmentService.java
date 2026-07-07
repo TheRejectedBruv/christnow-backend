@@ -4,15 +4,16 @@ import com.christnow.devotionals.models.Course;
 import com.christnow.devotionals.models.User;
 import com.christnow.devotionals.repositories.CourseRepository;
 import com.christnow.devotionals.repositories.UserRepository;
-import com.google.gson.JsonObject;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;
-import com.stripe.net.ApiResource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class PaymentFulfillmentService {
@@ -102,12 +103,20 @@ public class PaymentFulfillmentService {
 
         String rawJson = deserializer.getRawJson();
         if (rawJson != null && !rawJson.isBlank()) {
-            JsonObject obj = ApiResource.GSON.fromJson(rawJson, JsonObject.class);
-            if (obj.has("id")) {
-                return Session.retrieve(obj.get("id").getAsString());
+            String sessionId = extractSessionId(rawJson);
+            if (sessionId != null) {
+                return Session.retrieve(sessionId);
             }
         }
 
+        return null;
+    }
+
+    private String extractSessionId(String rawJson) {
+        Matcher matcher = Pattern.compile("\"id\"\\s*:\\s*\"(cs_[^\"]+)\"").matcher(rawJson);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
         return null;
     }
 

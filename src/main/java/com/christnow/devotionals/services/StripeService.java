@@ -15,9 +15,6 @@ public class StripeService {
     @Value("${stripe.secret.key}")
     private String stripeSecretKey;
 
-    @Value("${stripe.secret.key}")
-    private String stripeSecretKey;
-
     public String createCheckoutSession(
             String customerEmail,
             List<String> courseNames,
