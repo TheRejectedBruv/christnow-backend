@@ -15,25 +15,21 @@ public class StripeService {
     @Value("${stripe.secret.key}")
     private String stripeSecretKey;
 
-    /**
-     * Creates a Stripe Checkout session
-     *
-     * @param customerEmail the email of the logged-in user
-     * @param courseNames   names of courses being purchased
-     * @param amount        amount in cents (e.g. $10 = 1000)
-     * @param successUrl    redirect after success
-     * @param cancelUrl     redirect if user cancels
-     * @return checkout session URL
-     */
+    @Value("${stripe.secret.key}")
+    private String stripeSecretKey;
+
     public String createCheckoutSession(
             String customerEmail,
             List<String> courseNames,
+            Long courseId,
             long amount,
             String successUrl,
             String cancelUrl
     ) throws StripeException {
 
         Stripe.apiKey = stripeSecretKey;
+
+        String courseTitle = String.join(", ", courseNames);
 
         SessionCreateParams.LineItem lineItem = SessionCreateParams.LineItem.builder()
                 .setQuantity(1L)
@@ -43,7 +39,7 @@ public class StripeService {
                                 .setUnitAmount(amount)
                                 .setProductData(
                                         SessionCreateParams.LineItem.PriceData.ProductData.builder()
-                                                .setName(String.join(", ", courseNames))
+                                                .setName(courseTitle)
                                                 .build()
                                 )
                                 .build()
@@ -54,8 +50,10 @@ public class StripeService {
                 .setMode(SessionCreateParams.Mode.PAYMENT)
                 .setSuccessUrl(successUrl)
                 .setCancelUrl(cancelUrl)
-                .setCustomerEmail(customerEmail) // ✅ capture user email
-                .putMetadata("courseName", String.join(", ", courseNames)) // ✅ save courseName
+                .setCustomerEmail(customerEmail)
+                .putMetadata("courseId", String.valueOf(courseId))
+                .putMetadata("courseName", courseTitle)
+                .putMetadata("userEmail", customerEmail)
                 .addLineItem(lineItem)
                 .build();
 

@@ -134,9 +134,20 @@ public class UserController {
 
     // --------- 3 Free Courses: Add & Get -----------
     @PostMapping("/{email}/free-courses/{courseId}")
-    public ResponseEntity<String> addFreeCourse(@PathVariable String email, @PathVariable Long courseId) {
+    public ResponseEntity<String> addFreeCourse(
+            @PathVariable String email,
+            @PathVariable Long courseId,
+            Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Sign in required.");
+        }
+        String callerEmail = AuthUtils.resolveEmail(authentication);
+        if (callerEmail == null || !callerEmail.equalsIgnoreCase(email.trim())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("You can only add free courses to your own account.");
+        }
         try {
-            userService.addFreeCourseToUser(email, courseId);
+            userService.addFreeCourseToUser(callerEmail, courseId);
             return ResponseEntity.ok("Added");
         } catch (RuntimeException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());

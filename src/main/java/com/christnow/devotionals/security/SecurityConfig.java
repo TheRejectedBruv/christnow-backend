@@ -48,6 +48,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/courses/{id}").permitAll()
                 .requestMatchers(HttpMethod.GET, "/courses/exists").permitAll()
                 .requestMatchers(HttpMethod.GET, "/lessons/by-course/**").permitAll()
+                .requestMatchers("/payment/webhook", "/api/payment/webhook").permitAll()
                 .requestMatchers("/courses/**").authenticated()
                 .requestMatchers("/devotionals/**").permitAll()
                 .anyRequest().authenticated()

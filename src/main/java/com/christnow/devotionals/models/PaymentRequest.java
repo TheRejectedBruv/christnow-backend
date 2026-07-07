@@ -3,16 +3,22 @@ import java.util.List;
 
 public class PaymentRequest {
 	 private List<String> courseNames;
+	    private Long courseId;
 	    private long amount;
 	    private String successUrl;
 	    private String cancelUrl;
 
-	    // Getters and Setters
 	    public List<String> getCourseNames() {
 	        return courseNames;
 	    }
 	    public void setCourseNames(List<String> courseNames) {
 	        this.courseNames = courseNames;
+	    }
+	    public Long getCourseId() {
+	        return courseId;
+	    }
+	    public void setCourseId(Long courseId) {
+	        this.courseId = courseId;
 	    }
 	    public long getAmount() {
 	        return amount;
