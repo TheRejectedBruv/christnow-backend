@@ -9,6 +9,7 @@ import com.christnow.devotionals.exception.ResourceNotFoundException;
 
 import com.christnow.devotionals.repositories.CourseRepository;
 import com.christnow.devotionals.repositories.LessonRepository;
+import com.christnow.devotionals.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,11 +24,16 @@ public class CourseService {
 
     private final CourseRepository courseRepository;
     private final LessonRepository lessonRepository;
+    private final UserRepository userRepository;
 
     @Autowired
-    public CourseService(CourseRepository courseRepository, LessonRepository lessonRepository) {
+    public CourseService(
+            CourseRepository courseRepository,
+            LessonRepository lessonRepository,
+            UserRepository userRepository) {
         this.courseRepository = courseRepository;
         this.lessonRepository = lessonRepository;
+        this.userRepository = userRepository;
     }
 
     public List<Course> getAllCourses() {
@@ -54,12 +60,31 @@ public class CourseService {
         }).orElseThrow(() -> new ResourceNotFoundException("Course not found with id: " + id));
     }
 
+    @Transactional
     public boolean deleteCourse(Long id) {
-        if (courseRepository.existsById(id)) {
-            courseRepository.deleteById(id);
-            return true;
+        Optional<Course> courseOpt = courseRepository.findById(id);
+        if (courseOpt.isEmpty()) {
+            return false;
         }
-        return false;
+
+        Course course = courseOpt.get();
+
+        userRepository.findAll().forEach(user -> {
+            boolean changed = false;
+            if (user.getFreeCourses() != null && user.getFreeCourses().removeIf(c -> c.getId().equals(id))) {
+                changed = true;
+            }
+            if (user.getOwnedCourses() != null && user.getOwnedCourses().removeIf(c -> c.getId().equals(id))) {
+                changed = true;
+            }
+            if (changed) {
+                userRepository.save(user);
+            }
+        });
+
+        lessonRepository.findByCourseId(id).forEach(lessonRepository::delete);
+        courseRepository.delete(course);
+        return true;
     }
 
     public boolean existsByTitle(String title) {

@@ -24,6 +24,7 @@ import com.christnow.devotionals.repositories.UserRepository;
 import com.christnow.devotionals.security.AuthUtils;
 import com.christnow.devotionals.security.JwtUtil;
 import com.christnow.devotionals.services.AdminService;
+import com.christnow.devotionals.services.CourseService;
 import com.christnow.devotionals.services.UserService;
 
 
@@ -51,6 +52,9 @@ public class UserController {
 
     @Autowired
     private AdminService adminService;
+
+    @Autowired
+    private CourseService courseService;
 
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -104,7 +108,7 @@ public class UserController {
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
             String email = loginRequest.getEmail() == null ? "" : loginRequest.getEmail().trim().toLowerCase();
-            Optional<User> optionalUser = userRepository.findByEmail(email);
+            Optional<User> optionalUser = userRepository.findByEmailIgnoreCase(email);
             if (optionalUser.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password.");
             }
@@ -185,7 +189,7 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Could not resolve signed-in email");
         }
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
 
@@ -204,8 +208,43 @@ public class UserController {
         out.put("isConfiguredAdmin", adminService.isAdmin(user.getEmail()));
         out.put("coursesEmpty", adminService.isCoursesEmpty());
         out.put("adminConfigured", adminService.isAdminConfigured());
+        out.put("adminHint", adminService.adminHintFor(user.getEmail()));
 
 
         return ResponseEntity.ok(out);
+    }
+
+    @PostMapping("/admin/courses/{courseId}/delete")
+    public ResponseEntity<?> adminDeleteCourse(
+            Authentication authentication,
+            HttpServletRequest request,
+            @PathVariable Long courseId) {
+        String email = AuthUtils.resolveEmail(authentication, request, jwtUtil);
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Sign in required. No valid login token was received.");
+        }
+
+        User user = userRepository.findByEmailIgnoreCase(email)
+                .orElse(null);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Signed-in user not found for token.");
+        }
+
+        if (!adminService.isAdmin(user.getEmail())) {
+            Map<String, Object> err = new HashMap<>();
+            err.put("message", "Admin access required.");
+            err.put("signedInEmail", user.getEmail());
+            err.put("adminConfigured", adminService.isAdminConfigured());
+            err.put("isConfiguredAdmin", false);
+            err.put("hint", adminService.adminHintFor(user.getEmail()));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(err);
+        }
+
+        if (courseService.deleteCourse(courseId)) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 }

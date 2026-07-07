@@ -7,13 +7,18 @@ import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -52,6 +57,10 @@ public class SecurityConfig {
                 .requestMatchers("/courses/**").authenticated()
                 .requestMatchers("/devotionals/**").permitAll()
                 .anyRequest().authenticated()
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
+                .accessDeniedHandler(corsAwareAccessDeniedHandler())
             );
 
 
@@ -102,6 +111,36 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    private AccessDeniedHandler corsAwareAccessDeniedHandler() {
+        return (HttpServletRequest request, HttpServletResponse response,
+                org.springframework.security.access.AccessDeniedException accessDeniedException) -> {
+            applyCorsHeaders(request, response);
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("text/plain;charset=UTF-8");
+            response.getWriter().write("Forbidden. Sign in again, then retry.");
+        };
+    }
+
+    private void applyCorsHeaders(HttpServletRequest request, HttpServletResponse response) {
+        String origin = request.getHeader("Origin");
+        if (origin == null || origin.isBlank()) {
+            return;
+        }
+        List<String> allowedPatterns = List.of(
+                "https://christnow.co",
+                "https://www.christnow.co"
+        );
+        boolean allowed = allowedPatterns.contains(origin)
+                || origin.endsWith(".netlify.app")
+                || origin.endsWith(".netlify.com")
+                || origin.startsWith("http://localhost:")
+                || origin.startsWith("http://127.0.0.1:");
+        if (allowed) {
+            response.setHeader("Access-Control-Allow-Origin", origin);
+            response.setHeader("Vary", "Origin");
+        }
     }
 
 
