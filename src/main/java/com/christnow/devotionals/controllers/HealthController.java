@@ -22,7 +22,7 @@ public class HealthController {
     public Map<String, Object> health() {
         return Map.of(
                 "status", "OK",
-                "build", "2026-07-07-v4",
+                "build", "2026-07-10-reflection-v1",
                 "adminConfigured", adminService.isAdminConfigured()
         );
     }

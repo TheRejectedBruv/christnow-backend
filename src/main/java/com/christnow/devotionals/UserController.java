@@ -25,6 +25,7 @@ import com.christnow.devotionals.security.AuthUtils;
 import com.christnow.devotionals.security.JwtUtil;
 import com.christnow.devotionals.services.AdminService;
 import com.christnow.devotionals.services.CourseService;
+import com.christnow.devotionals.services.LessonService;
 import com.christnow.devotionals.services.UserService;
 
 
@@ -55,6 +56,9 @@ public class UserController {
 
     @Autowired
     private CourseService courseService;
+
+    @Autowired
+    private LessonService lessonService;
 
 
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
@@ -212,6 +216,32 @@ public class UserController {
 
 
         return ResponseEntity.ok(out);
+    }
+
+    @GetMapping("/lessons/{lessonId}/reflection")
+    public ResponseEntity<String> getLessonReflection(
+            @PathVariable Long lessonId,
+            Authentication authentication,
+            HttpServletRequest request) {
+        String email = AuthUtils.resolveEmail(authentication, request, jwtUtil);
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("");
+        }
+        return ResponseEntity.ok(lessonService.getReflection(email, lessonId));
+    }
+
+    @PostMapping("/lessons/{lessonId}/reflection")
+    public ResponseEntity<?> saveLessonReflection(
+            @PathVariable Long lessonId,
+            @RequestBody String reflectionText,
+            Authentication authentication,
+            HttpServletRequest request) {
+        String email = AuthUtils.resolveEmail(authentication, request, jwtUtil);
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Sign in required.");
+        }
+        lessonService.saveReflection(lessonId, email, reflectionText);
+        return ResponseEntity.ok("Reflection saved.");
     }
 
     @PostMapping("/admin/courses/{courseId}/delete")

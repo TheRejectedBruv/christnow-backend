@@ -103,15 +103,6 @@ public class LessonController {
         return ResponseEntity.ok().body("Lesson marked as complete.");
     }
 
-    // Save reflection
-    @PostMapping("/{lessonId}/reflection")
-    public ResponseEntity<?> saveReflection(@PathVariable Long lessonId,
-                                            @RequestBody String reflectionText,
-                                            Principal principal) {
-        lessonService.saveReflection(lessonId, principal.getName(), reflectionText);
-        return ResponseEntity.ok().body("Reflection saved.");
-    }
-
     private boolean canManage(Authentication authentication, HttpServletRequest request) {
         return adminService.canManageCourses(AuthUtils.resolveEmail(authentication, request, jwtUtil));
     }

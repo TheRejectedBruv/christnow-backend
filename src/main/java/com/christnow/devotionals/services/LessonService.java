@@ -1,7 +1,9 @@
 package com.christnow.devotionals.services;
 
 import com.christnow.devotionals.models.Lesson;
+import com.christnow.devotionals.models.LessonReflection;
 import com.christnow.devotionals.models.User;
+import com.christnow.devotionals.repositories.LessonReflectionRepository;
 import com.christnow.devotionals.repositories.LessonRepository;
 import com.christnow.devotionals.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +20,11 @@ public class LessonService {
     @Autowired
     private UserRepository userRepository;
 
-    // Example in-memory storage for completion & reflections
-    // Replace with database tables/entities later for real persistence
+    @Autowired
+    private LessonReflectionRepository lessonReflectionRepository;
+
+    // In-memory storage for completion until persisted in the database
     private final Map<String, Set<Long>> userCompletedLessons = new HashMap<>();
-    private final Map<String, Map<Long, String>> userReflections = new HashMap<>();
 
     public List<Lesson> getLessonsByCourse(Long courseId) {
         return lessonRepository.findByCourseId(courseId);
@@ -46,14 +49,22 @@ public class LessonService {
                 .add(lessonId);
     }
 
-    public void saveReflection(Long lessonId, String username, String reflectionText) {
+    public void saveReflection(Long lessonId, String email, String reflectionText) {
         Lesson lesson = getLessonById(lessonId);
-        User user = userRepository.findByEmail(username)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        userReflections
-                .computeIfAbsent(username, k -> new HashMap<>())
-                .put(lessonId, reflectionText);
+        LessonReflection reflection = lessonReflectionRepository
+                .findByUserIdAndLessonId(user.getId(), lessonId)
+                .orElseGet(() -> {
+                    LessonReflection created = new LessonReflection();
+                    created.setUser(user);
+                    created.setLesson(lesson);
+                    return created;
+                });
+
+        reflection.setReflectionText(reflectionText != null ? reflectionText : "");
+        lessonReflectionRepository.save(reflection);
     }
 
     // Optional: helpers for frontend to get data
@@ -62,8 +73,10 @@ public class LessonService {
                 .contains(lessonId);
     }
 
-    public String getReflection(String username, Long lessonId) {
-        return userReflections.getOrDefault(username, Collections.emptyMap())
-                .getOrDefault(lessonId, "");
+    public String getReflection(String email, Long lessonId) {
+        return userRepository.findByEmailIgnoreCase(email)
+                .flatMap(user -> lessonReflectionRepository.findByUserIdAndLessonId(user.getId(), lessonId))
+                .map(LessonReflection::getReflectionText)
+                .orElse("");
     }
 }
