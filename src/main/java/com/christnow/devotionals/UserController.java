@@ -218,6 +218,18 @@ public class UserController {
         return ResponseEntity.ok(out);
     }
 
+    @GetMapping("/courses/{courseId}/completed-lessons")
+    public ResponseEntity<?> getCompletedLessons(
+            @PathVariable Long courseId,
+            Authentication authentication,
+            HttpServletRequest request) {
+        String email = AuthUtils.resolveEmail(authentication, request, jwtUtil);
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Sign in required.");
+        }
+        return ResponseEntity.ok(lessonService.getCompletedLessonIdsForCourse(email, courseId));
+    }
+
     @GetMapping("/lessons/{lessonId}/reflection")
     public ResponseEntity<String> getLessonReflection(
             @PathVariable Long lessonId,

@@ -1,14 +1,17 @@
 package com.christnow.devotionals.services;
 
 import com.christnow.devotionals.models.Lesson;
+import com.christnow.devotionals.models.LessonCompletion;
 import com.christnow.devotionals.models.LessonReflection;
 import com.christnow.devotionals.models.User;
+import com.christnow.devotionals.repositories.LessonCompletionRepository;
 import com.christnow.devotionals.repositories.LessonReflectionRepository;
 import com.christnow.devotionals.repositories.LessonRepository;
 import com.christnow.devotionals.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.*;
 
 @Service
@@ -23,8 +26,8 @@ public class LessonService {
     @Autowired
     private LessonReflectionRepository lessonReflectionRepository;
 
-    // In-memory storage for completion until persisted in the database
-    private final Map<String, Set<Long>> userCompletedLessons = new HashMap<>();
+    @Autowired
+    private LessonCompletionRepository lessonCompletionRepository;
 
     public List<Lesson> getLessonsByCourse(Long courseId) {
         return lessonRepository.findByCourseId(courseId);
@@ -39,14 +42,31 @@ public class LessonService {
         lessonRepository.deleteById(id);
     }
 
-    public void markLessonComplete(Long lessonId, String username) {
+    public void markLessonComplete(Long lessonId, String email) {
         Lesson lesson = getLessonById(lessonId);
-        User user = userRepository.findByEmail(username)
+        User user = userRepository.findByEmailIgnoreCase(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        userCompletedLessons
-                .computeIfAbsent(username, k -> new HashSet<>())
-                .add(lessonId);
+        lessonCompletionRepository
+                .findByUserIdAndLessonId(user.getId(), lessonId)
+                .orElseGet(() -> {
+                    LessonCompletion completion = new LessonCompletion();
+                    completion.setUser(user);
+                    completion.setLesson(lesson);
+                    completion.setCompletedAt(Instant.now());
+                    return lessonCompletionRepository.save(completion);
+                });
+    }
+
+    public List<Long> getCompletedLessonIdsForCourse(String email, Long courseId) {
+        User user = userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return lessonCompletionRepository
+                .findByUserIdAndLesson_CourseId(user.getId(), courseId)
+                .stream()
+                .map(completion -> completion.getLesson().getId())
+                .toList();
     }
 
     public void saveReflection(Long lessonId, String email, String reflectionText) {
@@ -67,10 +87,10 @@ public class LessonService {
         lessonReflectionRepository.save(reflection);
     }
 
-    // Optional: helpers for frontend to get data
-    public boolean isLessonCompleted(String username, Long lessonId) {
-        return userCompletedLessons.getOrDefault(username, Collections.emptySet())
-                .contains(lessonId);
+    public boolean isLessonCompleted(String email, Long lessonId) {
+        return userRepository.findByEmailIgnoreCase(email)
+                .flatMap(user -> lessonCompletionRepository.findByUserIdAndLessonId(user.getId(), lessonId))
+                .isPresent();
     }
 
     public String getReflection(String email, Long lessonId) {
