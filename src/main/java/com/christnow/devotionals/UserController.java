@@ -218,6 +218,23 @@ public class UserController {
         return ResponseEntity.ok(out);
     }
 
+    @GetMapping("/admin/stats")
+    public ResponseEntity<?> getAdminStats(
+            Authentication authentication,
+            HttpServletRequest request) {
+        String email = AuthUtils.resolveEmail(authentication, request, jwtUtil);
+        if (email == null || email.isBlank()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Sign in required.");
+        }
+        if (!adminService.isAdmin(email)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Admin access required.");
+        }
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("totalUsers", userRepository.count());
+        return ResponseEntity.ok(stats);
+    }
+
     @GetMapping("/courses/{courseId}/completed-lessons")
     public ResponseEntity<?> getCompletedLessons(
             @PathVariable Long courseId,
