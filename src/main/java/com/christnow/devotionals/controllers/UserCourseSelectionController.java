@@ -52,11 +52,11 @@ public class UserCourseSelectionController {
             return ResponseEntity.badRequest().body("Course already selected");
         }
 
-        // Enforce 3 free course limit
+        // Enforce 1 free course limit
         if (course.isFree()) {
             int currentFreeCount = courseSelectionService.getFreeCourseCount(user);
-            if (currentFreeCount >= 3) {
-                return ResponseEntity.badRequest().body("You have already selected 3 free courses");
+            if (currentFreeCount >= 1) {
+                return ResponseEntity.badRequest().body("You have already claimed your free course");
             }
         }
 

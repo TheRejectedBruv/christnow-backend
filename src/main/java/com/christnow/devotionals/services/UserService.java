@@ -44,8 +44,8 @@ public class UserService {
         if (ownsCourse(user, courseId)) {
             throw new RuntimeException("You already own this course.");
         }
-        if (user.getFreeCourses().size() >= 3) {
-            throw new RuntimeException("You can only select 3 free courses.");
+        if (user.getFreeCourses().size() >= 1) {
+            throw new RuntimeException("You can only claim 1 free course.");
         }
         if (user.getFreeCourses().stream().anyMatch(c -> courseId.equals(c.getId()))) {
             throw new RuntimeException("Course already selected as free.");

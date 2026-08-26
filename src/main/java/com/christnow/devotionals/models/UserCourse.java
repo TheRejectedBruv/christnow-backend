@@ -28,7 +28,7 @@ public class UserCourse {
 	    	return enrolledAt;
 	    }
 
-	    private boolean isFreeCourse; // Tracks if it's one of the user's 3 free courses
+	    private boolean isFreeCourse; // Tracks if it's the user's free course pick
 
 	    public UserCourse() {}
 

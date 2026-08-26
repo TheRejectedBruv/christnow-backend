@@ -34,8 +34,8 @@ public class UserCourseService {
 	        
 		    if(isFreeCourse) {
 		    	long freeCoursesCount = countFreeCoursesForUser(user);
-		    	if(freeCoursesCount >= 3) {
-		    		throw new RuntimeException("You have already used your 3 free courses.");
+		    	if(freeCoursesCount >= 1) {
+		    		throw new RuntimeException("You have already used your free course.");
 		    	}
 		    }
 		    

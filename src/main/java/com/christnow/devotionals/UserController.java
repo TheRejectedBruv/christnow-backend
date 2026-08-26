@@ -140,7 +140,7 @@ public class UserController {
     }
 
 
-    // --------- 3 Free Courses: Add & Get -----------
+    // --------- 1 Free Course: Add & Get -----------
     @PostMapping("/{email}/free-courses/{courseId}")
     public ResponseEntity<String> addFreeCourse(
             @PathVariable String email,
