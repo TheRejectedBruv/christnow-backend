@@ -84,6 +84,7 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(List.of(
             "https://christnow.co",
             "https://www.christnow.co",
+            "https://*.pages.dev",
             "https://*.netlify.app",
             "https://*.netlify.com",
             "http://localhost:*",
@@ -133,6 +134,7 @@ public class SecurityConfig {
                 "https://www.christnow.co"
         );
         boolean allowed = allowedPatterns.contains(origin)
+                || origin.endsWith(".pages.dev")
                 || origin.endsWith(".netlify.app")
                 || origin.endsWith(".netlify.com")
                 || origin.startsWith("http://localhost:")
